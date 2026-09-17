@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Share to GAS</title>
+<link rel="manifest" href="./manifest.json">
+<style>
+  body {
+    font-family: sans-serif;
+    text-align: center;
+    padding: 40px 20px;
+    background: #f5f5f5;
+  }
+  #status { font-size: 18px; margin-top: 20px; }
+  .ok { color: #1a7f37; }
+  .error { color: #cf222e; }
+</style>
+</head>
+<body>
+<h2>Share to GAS</h2>
+<div id="status">送信中...</div>
+
+<script>
+// Service Worker登録（インストール可能にするため必須）
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
+
+// ★ ここは、後でGASのウェブアプリURLを発行したら書き換えます ★
+const GAS_WEB_APP_URL = "ここにGASのウェブアプリURLを貼る";
+
+function getSharedUrl() {
+  const params = new URLSearchParams(window.location.search);
+  // "url"パラメータに入るのが基本だが、アプリによっては"text"にURLが入ることもあるため両方見る
+  return params.get('url') || params.get('text') || '';
+}
+
+async function sendToGas() {
+  const statusEl = document.getElementById('status');
+  const sharedUrl = getSharedUrl();
+
+  if (!sharedUrl) {
+    statusEl.textContent = '共有されたURLが見つかりませんでした。';
+    statusEl.className = 'error';
+    return;
+  }
+
+  if (GAS_WEB_APP_URL === "ここにGASのウェブアプリURLを貼る") {
+    statusEl.textContent = 'GASのURLが未設定です（index.htmlを確認してください）。';
+    statusEl.className = 'error';
+    return;
+  }
+
+  try {
+    await fetch(GAS_WEB_APP_URL + '?url=' + encodeURIComponent(sharedUrl), {
+      method: 'GET',
+      mode: 'no-cors' // GAS側からのレスポンス内容は見ないため、CORSエラーを回避
+    });
+    statusEl.textContent = '送信しました！';
+    statusEl.className = 'ok';
+    // 1.5秒後に自動でタブを閉じる（Android版Chromeでは動作しない場合あり）
+    setTimeout(() => window.close(), 1500);
+  } catch (e) {
+    statusEl.textContent = '送信に失敗しました: ' + e.message;
+    statusEl.className = 'error';
+  }
+}
+
+sendToGas();
+</script>
+</body>
+</html>
